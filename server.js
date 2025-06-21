@@ -1,45 +1,40 @@
 const { Server } = require("socket.io");
-const http = require("http");
 
-const server = http.createServer();
-const io = new Server(server, {
-  cors: {
-    origin: "*", // allow all origins for now
-  },
+const io = new Server({
+  cors: { origin: "*" },
 });
 
 const players = {};
 
 io.on("connection", (socket) => {
-  console.log("Player connected:", socket.id);
+  console.log("New connection:", socket.id);
 
+  // Initialize new player
   players[socket.id] = {
-    x: 0,
-    y: 0,
-    z: 0,
-    name: "Player",
+    position: { x: 0, y: 0, z: 0 },
+    rotation: 0,
+    name: `Player`,
+    gun: "ppk",
+    isCrouching: false,
+    isShooting: false,
   };
 
-  socket.emit("init", { id: socket.id, players });
-  socket.broadcast.emit("playerJoined", {
-    id: socket.id,
-    data: players[socket.id],
-  });
+  // Send existing players to new player
+  socket.emit("existingPlayers", players);
 
-  socket.on("updatePosition", (pos) => {
-    if (players[socket.id]) {
-      players[socket.id] = { ...players[socket.id], ...pos };
-      socket.broadcast.emit("updatePlayer", { id: socket.id, pos });
-    }
+  // Notify others of new player
+  socket.broadcast.emit("newPlayer", { id: socket.id, ...players[socket.id] });
+
+  socket.on("updateState", (state) => {
+    players[socket.id] = { ...players[socket.id], ...state };
+    socket.broadcast.emit("playerMoved", { id: socket.id, ...state });
   });
 
   socket.on("disconnect", () => {
     console.log("Player disconnected:", socket.id);
     delete players[socket.id];
-    socket.broadcast.emit("playerLeft", { id: socket.id });
+    socket.broadcast.emit("playerLeft", socket.id);
   });
 });
 
-server.listen(3000, () => {
-  console.log("🟢 Multiplayer server running on port 3000");
-});
+io.listen(3000);
