@@ -32,16 +32,17 @@ io.on("connection", (socket) => {
   // Notify others that a new player joined
   socket.broadcast.emit("newPlayer", { id: socket.id, ...players[socket.id] });
 
-  // Handle position updates from a player
   socket.on("updatePosition", (data) => {
     if (players[socket.id]) {
       players[socket.id].position = data.position;
       players[socket.id].rotation = data.rotation;
+      players[socket.id].gunState = data.gunState;
 
-      // Broadcast the player's new position to everyone else
       socket.broadcast.emit("playerMoved", {
         id: socket.id,
         position: data.position,
+        rotation: data.rotation,
+        gunState: data.gunState,
       });
     }
   });
