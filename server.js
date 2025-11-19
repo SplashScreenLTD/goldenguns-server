@@ -20,17 +20,34 @@ const players = {};
 io.on("connection", (socket) => {
   console.log("✅ Player connected:", socket.id);
 
-  // Add the new player with initial position
-  players[socket.id] = {
-    position: { x: 0, y: 0, z: 0 },
-    rotation: 0,
-  };
+  // Listen for join event with player name
+  socket.on("join", (data) => {
+    console.log("👤 Player joined:", socket.id, "Name:", data.name);
+    
+    // Add the new player with initial position and name
+    players[socket.id] = {
+      position: data.position || { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      name: data.name || "Player",
+    };
 
-  // Send the new player the list of existing players
-  socket.emit("existingPlayers", players);
+    // Send the new player the list of existing players
+    socket.emit("existingPlayers", players);
 
-  // Notify others that a new player joined
-  socket.broadcast.emit("newPlayer", { id: socket.id, ...players[socket.id] });
+    // Notify others that a new player joined
+    socket.broadcast.emit("newPlayer", { 
+      id: socket.id, 
+      position: players[socket.id].position,
+      name: players[socket.id].name
+    });
+
+    // Also emit spawn event for compatibility
+    socket.broadcast.emit("spawn", { 
+      id: socket.id, 
+      position: players[socket.id].position,
+      name: players[socket.id].name
+    });
+  });
 
   socket.on("updatePosition", (data) => {
     if (players[socket.id]) {
